@@ -28,9 +28,14 @@ from htbuilder.funcs import rgba, rgb
 
 import streamlit as st
 
+import torch
+
+import py3Dmol
+from rdkit import Chem
+
 
 st.set_page_config(
-    page_title="Agent Theory", layout="wide", page_icon="images/flask.png"
+    page_title="Hyperparameter Tuning", layout="wide", page_icon="images/flask.png"
 )
 
 
@@ -73,7 +78,7 @@ def main():
     hide_header_footer()
 
     images = Image.open('./images/hi-paris.png')
-    st.image(images, width=400)
+    st.image(images, width=200)
 
     st.markdown("# Reading Group:  Graph Neural Network 🔍 🖥")
     st.subheader(
@@ -81,6 +86,85 @@ def main():
         This is a place where you can get familiar with Graph Classifications   🧪
         """
     )
+
+    #####
+    # Sidebar
+    st.sidebar.header("Hyperparameter Tuning")
+    st.sidebar.markdown("---")
+
+    conv = st.sidebar.selectbox('Convolution Type', ['GCNConv', 'GATConv'])
+    st.sidebar.markdown("---")
+
+    lr = st.sidebar.selectbox('Learning Rate', ['0.01', '0.001'])
+    st.sidebar.markdown("---")
+
+    hc = st.sidebar.selectbox('Hidden Channels', ['32', '64'])
+    st.sidebar.markdown("---")
+
+    conv = st.sidebar.selectbox('Batches', ['100', '200'])
+    st.sidebar.markdown("---")
+
+    conv = st.sidebar.selectbox('Layers', ['3'])
+    st.sidebar.markdown("---")
+
+
+
+
+    #####
+    # Content
+    st.header("00 - Use case")
+
+
+    st.header("01 - Dataset")
+
+
+
+    # Gather some statistics about the first graph.
+
+    st.write("Number of nodes: 17   /   Number of edges: 36   /   Average node degree: 2.12   /   Has isolated nodes: False   /   Has self-loops: False   /   Is undirected: True")
+
+    images = Image.open('images/mol.png')
+    st.image(images, width=200)
+
+
+    st.header("02 - Model Performance")
+
+    all_files = os.listdir("./datasets")    
+    csv_files = list(filter(lambda f: f.endswith('.csv'), all_files))
+    #print(csv_files)
+
+    conv = "GCNConv"
+    learning_rates = "0.01"
+    hidden_channels = "32"
+    epochs = "50"
+    batches = "200"
+    n_layers = "3"
+
+
+    filter_conv = [i for i in csv_files if conv in i]
+    filter_learning_rates = [i for i in filter_conv if learning_rates in i]
+    filter_hidden_channels = [i for i in filter_learning_rates if hidden_channels in i]
+    filter_epochs = [i for i in filter_hidden_channels if epochs in i]
+    filter_batches = [i for i in filter_epochs if batches in i]
+    filter_n_layers = [i for i in filter_batches if n_layers in i]
+    final_dataset = filter_n_layers[0]
+    print(final_dataset)
+
+    print(os.getcwd())
+    test = pd.read_csv(".datasets/"+final_dataset)
+    #test = test.loc[:, ~test.columns.str.contains('^Unnamed')]
+    #means = pd.DataFrame(test.mean()).T.rename(columns={c:c+'_mean' for c in test.columns})
+    #stds = pd.DataFrame(test.std()).T.rename(columns={c:c+'_std' for c in test.columns})
+    #results_df = pd.concat([means, stds], axis=1).reset_index(drop=True)    
+
+    #st.dataframe(results_df)
+
+    st.header("03 - About the model ")
+
+
+
+
+
     st.markdown("     ")
     st.markdown("     ")
     st.markdown("     ")
@@ -119,15 +203,14 @@ def main():
 
     st.markdown(
         """
-        [<img src='data:image/png;base64,{}' class='img-fluid' width=25 height=25>](https://github.com/gaetanbrison/reading-group-graph-neural-network) <small> graph classification 0.0.1 | September 2022</small>""".format(
+        [<img src='data:image/png;base64,{}' class='img-fluid' width=25 height=25>](https://github.com/gaetanbrison/reading-group-graph-neural-network) <small> graph classification 0.0.1 | November 2022</small>""".format(
             img_to_bytes("./images/github.png")
         ),
         unsafe_allow_html=True,
     )
 
 
-    st.sidebar.header("Dashboard")
-    st.sidebar.markdown("---")
+
 
 
 
@@ -135,7 +218,7 @@ if __name__=='__main__':
     main()
 
 st.markdown(" ")
-st.markdown("### ** 👨🏼‍💻 Speakers : **")
+st.markdown("### ** 👩🏼‍💻👨🏼‍💻 Speakers : **")
 st.image(['images/1.png','images/2.png'], width=150)
 
 st.markdown(f"####  Link to Project Website [here]({'https://github.com/gaetanbrison/reading-group-graph-neural-network'}) 🚀 ")
