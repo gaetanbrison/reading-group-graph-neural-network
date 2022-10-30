@@ -101,10 +101,13 @@ def main():
     hc = st.sidebar.selectbox('Hidden Channels', ['32', '64'])
     st.sidebar.markdown("---")
 
-    conv = st.sidebar.selectbox('Batches', ['100', '200'])
+    epochs = st.sidebar.selectbox('Epochs', ['50', '100'])
     st.sidebar.markdown("---")
 
-    conv = st.sidebar.selectbox('Layers', ['3'])
+    batches = st.sidebar.selectbox('Batches', ['100', '200'])
+    st.sidebar.markdown("---")
+
+    n_layers = st.sidebar.selectbox('Layers', ['3'])
     st.sidebar.markdown("---")
 
 
@@ -133,8 +136,8 @@ def main():
     csv_files = list(filter(lambda f: f.endswith('.csv'), all_files))
     #print(csv_files)
 
-    conv = "GCNConv"
-    learning_rates = "0.01"
+
+
     hidden_channels = "32"
     epochs = "50"
     batches = "200"
@@ -142,8 +145,8 @@ def main():
 
 
     filter_conv = [i for i in csv_files if conv in i]
-    filter_learning_rates = [i for i in filter_conv if learning_rates in i]
-    filter_hidden_channels = [i for i in filter_learning_rates if hidden_channels in i]
+    filter_learning_rates = [i for i in filter_conv if lr in i]
+    filter_hidden_channels = [i for i in filter_learning_rates if hc in i]
     filter_epochs = [i for i in filter_hidden_channels if epochs in i]
     filter_batches = [i for i in filter_epochs if batches in i]
     filter_n_layers = [i for i in filter_batches if n_layers in i]
@@ -151,17 +154,22 @@ def main():
     print(final_dataset)
 
     print(os.getcwd())
-    test = pd.read_csv(".datasets/"+final_dataset)
-    #test = test.loc[:, ~test.columns.str.contains('^Unnamed')]
-    #means = pd.DataFrame(test.mean()).T.rename(columns={c:c+'_mean' for c in test.columns})
-    #stds = pd.DataFrame(test.std()).T.rename(columns={c:c+'_std' for c in test.columns})
-    #results_df = pd.concat([means, stds], axis=1).reset_index(drop=True)    
+    test = pd.read_csv("datasets/"+final_dataset)
+    test = test.loc[:, ~test.columns.str.contains('^Unnamed')]
+    means = pd.DataFrame(test.mean()).T.rename(columns={c:c+'_mean' for c in test.columns})
+    min = pd.DataFrame(test[["loss"]].min()).T.rename(columns={c:c+'_min' for c in test.columns})
+    max = pd.DataFrame(test[["train_score","test_score"]].max()).T.rename(columns={c:c+'_max' for c in test.columns})
+    results_df = pd.concat([means,min, max], axis=1).reset_index(drop=True)    
 
-    #st.dataframe(results_df)
+    st.dataframe(results_df)
 
     st.header("03 - About the model ")
 
 
+    st.header("04 - Hyperparameters Tuning Code ")
+
+
+    st.header("05 -  ")
 
 
 
