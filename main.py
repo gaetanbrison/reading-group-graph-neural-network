@@ -28,9 +28,17 @@ from htbuilder.funcs import rgba, rgb
 
 import streamlit as st
 
+import torch
+
+import py3Dmol
+from rdkit import Chem
+
+import matplotlib
+
+
 
 st.set_page_config(
-    page_title="Agent Theory", layout="wide", page_icon="images/flask.png"
+    page_title="Hyperparameter Tuning", layout="wide", page_icon="images/flask.png"
 )
 
 
@@ -73,7 +81,7 @@ def main():
     hide_header_footer()
 
     images = Image.open('./images/hi-paris.png')
-    st.image(images, width=400)
+    st.image(images, width=200)
 
     st.markdown("# Reading Group:  Graph Neural Network 🔍 🖥")
     st.subheader(
@@ -81,6 +89,167 @@ def main():
         This is a place where you can get familiar with Graph Classifications   🧪
         """
     )
+
+    #####
+    # Sidebar
+    st.sidebar.header("Hyperparameter Tuning")
+    st.sidebar.markdown("---")
+
+    conv = st.sidebar.selectbox('Convolution Type', ['GCNConv', 'GATConv'])
+    st.sidebar.markdown("---")
+
+    lr = st.sidebar.selectbox('Learning Rate', ['0.01', '0.001'])
+    st.sidebar.markdown("---")
+
+    hc = st.sidebar.selectbox('Hidden Channels', ['32', '64'])
+    st.sidebar.markdown("---")
+
+    epochs = st.sidebar.selectbox('Epochs', ['50', '100'])
+    st.sidebar.markdown("---")
+
+    batches = st.sidebar.selectbox('Batches', ['100', '200'])
+    st.sidebar.markdown("---")
+
+    n_layers = st.sidebar.selectbox('Layers', ['3'])
+    st.sidebar.markdown("---")
+
+
+
+
+    #####
+    # Content
+    st.header("00 - Use case")
+    st.write("* Source: The dataset comes from MoleculeNet (Tox-21) with node and edge enrichment introduced by the Open Graph Benchmark.")
+    st.write("* Description: The dataset used contains 7 831 molecules. Each molecule is converted into a graph by representing atoms by nodes and replacing the bonds by edges. These nodes and edges are further enriched with various features to avoid losing valuable information such as the name of the atom or the type of bond. In total, input node features are 9-dimensional and edge features 3-dimensional.")
+    st.write("* Task: Predict whether a molecule is toxic or not.")
+
+
+    st.header("01 - Dataset")
+
+
+    st.markdown("#### Examples of molecule in the dataset:")
+    # Gather some statistics about the first graph.
+    col1, col2 = st.columns(2)
+
+    with col2:
+        images = Image.open('images/mol.png')
+        st.image(images, width=300)
+
+    with col1:
+        st.write(" ")
+        st.write("Number of nodes:",17)  
+        st.write("Number of edges:",36)
+        st.write("Average node degree:",2.12)
+        st.write("Has isolatednodes:",False)
+        st.write("Has self-loops:",False)
+        st.write ("Is undirected:",True)
+
+
+
+    st.header("02 - Model Performance")
+
+    all_files = os.listdir("./datasets")    
+    csv_files = list(filter(lambda f: f.endswith('.csv'), all_files))
+    #print(csv_files)
+
+
+    
+
+
+
+    filter_conv = [i for i in csv_files if conv in i]
+    filter_learning_rates = [i for i in filter_conv if lr in i]
+    filter_hidden_channels = [i for i in filter_learning_rates if hc in i]
+    filter_epochs = [i for i in filter_hidden_channels if epochs in i]
+    filter_batches = [i for i in filter_epochs if batches in i]
+    filter_n_layers = [i for i in filter_batches if n_layers in i]
+    final_dataset = filter_n_layers[0]
+    print(final_dataset)
+
+    print(os.getcwd())
+    test = pd.read_csv("datasets/"+final_dataset)
+    test = test.loc[:, ~test.columns.str.contains('^Unnamed')]
+    means = pd.DataFrame(test.mean()).T.rename(columns={c:c+'_mean' for c in test.columns})
+    min = pd.DataFrame(test[["loss"]].min()).T.rename(columns={c:c+'_min' for c in test.columns})
+    max = pd.DataFrame(test[["train_score","test_score"]].max()).T.rename(columns={c:c+'_max' for c in test.columns})
+    results_df = pd.concat([means,min, max], axis=1).reset_index(drop=True)    
+
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("You have selected the following model configuration:")
+        st.write(" ")
+        st.write(" ")
+        st.write("* Convolutions Type:",conv)
+        st.write("* Learning Rate:",float(lr))
+        st.write("* Hidden Channels:",int(hc))
+        st.write("* Epochs:",int(epochs))
+        st.write("* Batches:",int(batches))
+        st.write("* N° of Layers:",int(n_layers))
+
+
+    with col2:
+        st.write("You have achieved following performance:")
+        st.dataframe(results_df)
+
+
+        st.line_chart(test[["loss"]])
+
+
+    st.header("03 - About the model ")
+
+
+
+    snippet = f"""
+
+class GNN_3l(torch.nn.Module):
+    def __init__(self, input_size, hidden_channels, conv, conv_params=):
+        super(GNN_3l, self).__init__()
+        torch.manual_seed(12345)
+        self.conv1 = conv(
+            input_size, hidden_channels, **conv_params)
+        self.conv2 = conv(
+            hidden_channels, hidden_channels, **conv_params)
+        self.conv3 = conv(
+            hidden_channels, hidden_channels, **conv_params)
+        self.lin = Linear(hidden_channels, 2)
+
+    def forward(self, x, edge_index, batch,  edge_col=None):
+        # 1. Obtain node embeddings 
+        x = self.conv1(x, edge_index, edge_col)
+        x = x.relu()
+        x = self.conv2(x, edge_index, edge_col)
+        x = x.relu()
+        x = self.conv3(x, edge_index)
+
+        # 2. Readout layer
+        batch = torch.zeros(data.x.shape[0],dtype=int) if batch is None else batch
+        x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
+
+        # 3. Apply a final classifier
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.lin(x)
+    
+        return x
+
+    
+    """
+    code_header_placeholder = st.empty()
+    snippet_placeholder = st.empty()
+    code_header_placeholder.subheader(f"**Code for the GNN **")
+    snippet_placeholder.code(snippet)
+    
+ 
+
+
+
+    st.header("04 - Hyperparameters Tuning Code ")
+
+
+    st.header("05 -  References")
+
+
+
     st.markdown("     ")
     st.markdown("     ")
     st.markdown("     ")
@@ -119,15 +288,14 @@ def main():
 
     st.markdown(
         """
-        [<img src='data:image/png;base64,{}' class='img-fluid' width=25 height=25>](https://github.com/gaetanbrison/reading-group-graph-neural-network) <small> graph classification 0.0.1 | September 2022</small>""".format(
+        [<img src='data:image/png;base64,{}' class='img-fluid' width=25 height=25>](https://github.com/gaetanbrison/reading-group-graph-neural-network) <small> graph classification 0.0.1 | November 2022</small>""".format(
             img_to_bytes("./images/github.png")
         ),
         unsafe_allow_html=True,
     )
 
 
-    st.sidebar.header("Dashboard")
-    st.sidebar.markdown("---")
+
 
 
 
@@ -135,7 +303,7 @@ if __name__=='__main__':
     main()
 
 st.markdown(" ")
-st.markdown("### ** 👨🏼‍💻 Speakers : **")
+st.markdown("### ** 👩🏼‍💻👨🏼‍💻 Speakers : **")
 st.image(['images/1.png','images/2.png'], width=150)
 
 st.markdown(f"####  Link to Project Website [here]({'https://github.com/gaetanbrison/reading-group-graph-neural-network'}) 🚀 ")
