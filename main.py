@@ -28,7 +28,7 @@ from htbuilder.funcs import rgba, rgb
 
 import streamlit as st
 
-import torch
+
 
 import py3Dmol
 from rdkit import Chem
